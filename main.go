@@ -50,9 +50,29 @@ func EncryptWithXChaCha20Poly1305(plaintext, sharedSecret []byte) ([]byte, error
 	return ciphertext, nil
 }
 
+// Decrypts ciphertext using the shared secret key and returns the plaintext
+func DecryptWithXChaCha20Poly1305(ciphertext, sharedSecret []byte) ([]byte, error) {
+	// Extract the nonce from the ciphertext
+	nonce := ciphertext[:24]
+
+	// Generate a XChaCha20-Poly1305 cipher using the shared secret and nonce
+	cipher, err := chacha20poly1305.NewX(sharedSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decrypt the ciphertext using the cipher
+	plaintext, err := cipher.Open(nil, nonce, ciphertext[24:], nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return plaintext, nil
+}
+
 func main() {
 	// Generate a key pair for ECDH key exchange
-	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	senderPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		panic(err)
 	}
@@ -79,7 +99,7 @@ func main() {
 	// Perform ECDH key exchange with the recipient's public key
 	// In this example, we assume that the recipient's public key is already known
 	// and is stored in recipientPubKey
-	sharedSecret, err = ECDHKeyExchange(recipientPubKey, privKey.D.Bytes())
+	sharedSecret, err = ECDHKeyExchange(recipientPubKey, senderPrivKey.D.Bytes())
 	if err != nil {
 		panic(err)
 	}
@@ -93,4 +113,26 @@ func main() {
 
 	// Print the encrypted ciphertext
 	fmt.Println("Encrypted ciphertext: ", ciphertext)
+
+	////////////// RECIPIENT SIDE
+
+	// Imitate getting of bytes of the sender public key
+	publicKeyOfSender, err := x509.MarshalPKIXPublicKey(&senderPrivKey.PublicKey)
+	if err != nil {
+		panic(err)
+	}
+
+	// Perform ECDH key exchange with the sender public key
+	// Basically, we imitate that do not have access to the shared key
+	sharedKeyRecipientSecret, err := ECDHKeyExchange(publicKeyOfSender, recipientPrivKey.D.Bytes())
+	if err != nil {
+		panic(err)
+	}
+
+	decryptedText, err := DecryptWithXChaCha20Poly1305(ciphertext, sharedKeyRecipientSecret)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Decrypted text:", string(decryptedText))
 }
