@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"golang.org/x/crypto/chacha20poly1305"
+	"golang.org/x/crypto/curve25519"
 )
 
 // Performs ECDH key exchange and returns the shared secret key
@@ -70,6 +71,42 @@ func DecryptWithXChaCha20Poly1305(ciphertext, sharedSecret []byte) ([]byte, erro
 	return plaintext, nil
 }
 
+func curve25519Example() {
+	//TODO: Remove depricated functions form here
+
+	// Generate sender's private and public keys
+	var senderPrivateKey [32]byte
+	if _, err := rand.Read(senderPrivateKey[:]); err != nil {
+		panic(err)
+	}
+
+	var senderPublicKey [32]byte
+	curve25519.ScalarBaseMult(&senderPublicKey, &senderPrivateKey)
+
+	// Generate recipient's private and public keys
+	var recipientPrivateKey [32]byte
+	if _, err := rand.Read(recipientPrivateKey[:]); err != nil {
+		panic(err)
+	}
+
+	var recipientPublicKey [32]byte
+	curve25519.ScalarBaseMult(&recipientPublicKey, &recipientPrivateKey)
+
+	// Perform key exchange
+	var sharedKeySender [32]byte
+	curve25519.ScalarMult(&sharedKeySender, &senderPrivateKey, &recipientPublicKey)
+
+	var sharedKeyRecipient [32]byte
+	curve25519.ScalarMult(&sharedKeyRecipient, &recipientPrivateKey, &senderPublicKey)
+
+	// Verify that the shared keys match
+	if sharedKeySender != sharedKeyRecipient {
+		panic("Shared keys do not match")
+	}
+
+	fmt.Println("Shared key:", sharedKeySender)
+}
+
 func main() {
 	// Generate a key pair for ECDH key exchange
 	senderPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -129,4 +166,6 @@ func main() {
 	}
 
 	fmt.Println("Decrypted text:", string(decryptedText))
+
+	curve25519Example()
 }
