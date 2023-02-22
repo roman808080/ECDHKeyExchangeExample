@@ -77,12 +77,6 @@ func main() {
 		panic(err)
 	}
 
-	// Generate a random 32-byte secret key for XChaCha20-Poly1305 encryption
-	sharedSecret := make([]byte, 32)
-	if _, err := rand.Read(sharedSecret); err != nil {
-		panic(err)
-	}
-
 	// Generate a recipient key pair for ECDH key exchange
 	// We will not have it in real life, but only the public key
 	recipientPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -99,7 +93,7 @@ func main() {
 	// Perform ECDH key exchange with the recipient's public key
 	// In this example, we assume that the recipient's public key is already known
 	// and is stored in recipientPubKey
-	sharedSecret, err = ECDHKeyExchange(recipientPubKey, senderPrivKey.D.Bytes())
+	sharedSecret, err := ECDHKeyExchange(recipientPubKey, senderPrivKey.D.Bytes())
 	if err != nil {
 		panic(err)
 	}
